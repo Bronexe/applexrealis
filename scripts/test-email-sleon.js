@@ -81,7 +81,7 @@ async function testEmailSleon() {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" 
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://applexrealis.vercel.app'}/dashboard" 
                  style="background: #BF7F11; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
                 Ver Dashboard
               </a>
@@ -143,7 +143,7 @@ async function testEmailSleon() {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" 
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://applexrealis.vercel.app'}/dashboard" 
                  style="background: #BF7F11; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
                 Ver Dashboard
               </a>
