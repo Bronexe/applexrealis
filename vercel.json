@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "app/api/cron/process-notifications/route.ts": {
+      "maxDuration": 30
+    },
+    "app/api/cron/create-events/route.ts": {
+      "maxDuration": 30
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/create-events",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/process-notifications",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}
