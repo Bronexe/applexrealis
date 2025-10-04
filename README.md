@@ -42,7 +42,7 @@ Crea un archivo `.env.local` con:
 NEXT_PUBLIC_SUPABASE_URL=tu_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=tu_supabase_service_role_key
-NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=https://applexrealis.vercel.app/dashboard
+NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=https://app.lexrealis.cl/dashboard
 \`\`\`
 
 ### 3. Configurar Base de Datos

@@ -144,4 +144,14 @@
     height: 100vh !important;
     min-height: 100vh !important;
   }
+
+  /* Ocultar scrollbar en navegadores WebKit */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
 }

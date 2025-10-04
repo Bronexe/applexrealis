@@ -5,7 +5,11 @@ export async function GET(request: NextRequest) {
   try {
     // Verificar que la request viene de un cron job válido
     const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const expectedAuth = `Bearer ${process.env.CRON_SECRET || 'test-secret'}`
+    
+    // En desarrollo, permitir test-secret si CRON_SECRET no está configurado
+    if (authHeader !== expectedAuth) {
+      console.error('Auth failed:', { authHeader, expectedAuth })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

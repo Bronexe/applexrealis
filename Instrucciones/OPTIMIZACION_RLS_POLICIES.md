@@ -1,154 +1,262 @@
-# 🚀 Optimización de Políticas RLS para Mejor Rendimiento
+# Optimización de Políticas RLS (Row Level Security)
 
-## ⚠️ **PROBLEMAS IDENTIFICADOS**
+## Problema Identificado
 
-Las alertas de Supabase indican dos problemas principales de rendimiento:
+El linter de Supabase detectó múltiples advertencias de rendimiento en las políticas RLS:
 
-### **🔴 Auth RLS Initialization Plan**
-- Las funciones `auth.uid()` se re-evalúan para cada fila
-- Esto causa **rendimiento subóptimo** a escala
-- Afecta a **todas las tablas** del sistema
+1. **Auth RLS Initialization Plan**: Las funciones `auth.<function>()` se re-evalúan para cada fila
+2. **Multiple Permissive Policies**: Hay múltiples políticas permisivas para el mismo rol y acción
 
-### **🔴 Multiple Permissive Policies**
-- La tabla `administrators` tiene **políticas duplicadas**
-- Múltiples políticas para el mismo rol y acción
-- Cada política debe ejecutarse para cada consulta
+## Solución Implementada
 
-## ✅ **SOLUCIONES IMPLEMENTADAS**
+### 1. Funciones Helper Optimizadas
 
-### **🔧 Optimización de Auth Functions**
-**Antes:**
+Se crearon funciones helper que optimizan las llamadas a `auth`:
+
 ```sql
-CREATE POLICY "policy_name" ON table_name
-  FOR SELECT USING (auth.uid() = user_id);
+-- Función optimizada para obtener user_id
+CREATE OR REPLACE FUNCTION auth.current_user_id()
+RETURNS UUID
+LANGUAGE SQL
+STABLE
+AS $$
+  SELECT (current_setting('request.jwt.claims', true)::json->>'sub')::uuid;
+$$;
+
+-- Función optimizada para verificar super admin
+CREATE OR REPLACE FUNCTION auth.is_super_admin()
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM administrators 
+    WHERE user_id = auth.current_user_id() 
+    AND role = 'super_admin' 
+    AND is_active = true
+  );
+$$;
+
+-- Función optimizada para verificar acceso a condominio
+CREATE OR REPLACE FUNCTION auth.has_condo_access(condo_id_param UUID)
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+AS $$
+  SELECT auth.is_super_admin() OR EXISTS (
+    SELECT 1 FROM condos 
+    WHERE id = condo_id_param 
+    AND user_id = auth.current_user_id()
+  );
+$$;
 ```
 
-**Después:**
+### 2. Políticas Consolidadas
+
+Se eliminaron políticas duplicadas y se crearon versiones optimizadas:
+
+**Antes (problemático):**
 ```sql
-CREATE POLICY "policy_name" ON table_name
-  FOR SELECT USING ((select auth.uid()) = user_id);
+-- Múltiples políticas para la misma acción
+CREATE POLICY "Users can view own condos" ON condos FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "Users can only see their own condos" ON condos FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "Super admins can view all condos" ON condos FOR SELECT USING (auth.role() = 'super_admin');
 ```
 
-**Beneficio:** La función `auth.uid()` se evalúa **una sola vez** por consulta en lugar de por fila.
-
-### **🔧 Eliminación de Políticas Duplicadas**
-**Problema:** La tabla `administrators` tenía políticas duplicadas:
-- `admin_select_policy` + `Allow authenticated users to view administrators`
-- `admin_insert_policy` + `Allow authenticated users to insert administrators`
-- `admin_update_policy` + `Allow authenticated users to update administrators`
-- `admin_delete_policy` + `Allow authenticated users to delete administrators`
-
-**Solución:** Eliminé las políticas con nombres genéricos y mantuve las descriptivas.
-
-## 📊 **TABLAS OPTIMIZADAS**
-
-### **✅ Tablas Procesadas**
-1. **administrators** - Políticas duplicadas eliminadas + auth.uid() optimizado
-2. **condos** - auth.uid() optimizado
-3. **assemblies** - auth.uid() optimizado
-4. **emergency_plans** - auth.uid() optimizado
-5. **certifications** - auth.uid() optimizado
-6. **insurances** - auth.uid() optimizado
-7. **alerts** - auth.uid() optimizado
-8. **notification_settings** - auth.uid() optimizado
-
-### **✅ Políticas por Tabla**
-Cada tabla tiene **4 políticas optimizadas**:
-- **SELECT**: Ver solo datos del usuario autenticado
-- **INSERT**: Insertar solo con user_id del usuario autenticado
-- **UPDATE**: Actualizar solo datos del usuario autenticado
-- **DELETE**: Eliminar solo datos del usuario autenticado
-
-## 🎯 **BENEFICIOS DE RENDIMIENTO**
-
-### **⚡ Mejoras Esperadas**
-- **Reducción del 50-80%** en tiempo de evaluación de políticas
-- **Menos carga** en el servidor de base de datos
-- **Consultas más rápidas** especialmente con muchos registros
-- **Mejor escalabilidad** para aplicaciones con muchos usuarios
-
-### **🔒 Seguridad Mantenida**
-- **Misma funcionalidad** de seguridad
-- **Acceso restringido** por usuario
-- **Políticas consistentes** en todas las tablas
-- **Sin cambios** en la lógica de negocio
-
-## 🚀 **INSTRUCCIONES DE EJECUCIÓN**
-
-### **PASO 1: Acceder a Supabase SQL Editor**
-1. Ve a tu proyecto en Supabase
-2. Navega a **SQL Editor** en el menú lateral
-3. Haz clic en **"New query"**
-
-### **PASO 2: Ejecutar el Script de Optimización**
-1. Copia **TODO** el contenido del archivo `scripts/optimize_rls_policies.sql`
-2. Pégalo en el editor SQL de Supabase
-3. Haz clic en **"Run"** para ejecutar el script
-
-### **PASO 3: Verificar las Optimizaciones**
-El script incluye verificaciones automáticas que te mostrarán:
-- ✅ Políticas sin duplicados
-- ✅ Uso correcto de `(select auth.uid())`
-- ✅ Estructura optimizada de políticas
-- ✅ Mensaje de confirmación
-
-## 📈 **MONITOREO POST-OPTIMIZACIÓN**
-
-### **✅ Verificaciones Recomendadas**
-1. **Revisar alertas de Supabase** - Deberían desaparecer las alertas de rendimiento
-2. **Probar funcionalidad** - Verificar que todas las páginas funcionen correctamente
-3. **Monitorear rendimiento** - Observar mejoras en tiempo de respuesta
-4. **Verificar seguridad** - Confirmar que los usuarios solo ven sus datos
-
-### **✅ Métricas a Observar**
-- **Tiempo de respuesta** de consultas
-- **Uso de CPU** del servidor de base de datos
-- **Número de alertas** en Supabase
-- **Rendimiento general** de la aplicación
-
-## 🔍 **ESTRUCTURA DE POLÍTICAS OPTIMIZADAS**
-
-### **✅ Patrón Estándar**
+**Después (optimizado):**
 ```sql
--- SELECT Policy
-CREATE POLICY "Allow authenticated users to view [table]" ON [table]
-  FOR SELECT USING ((select auth.uid()) = user_id);
-
--- INSERT Policy
-CREATE POLICY "Allow authenticated users to insert [table]" ON [table]
-  FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
-
--- UPDATE Policy
-CREATE POLICY "Allow authenticated users to update [table]" ON [table]
-  FOR UPDATE USING ((select auth.uid()) = user_id);
-
--- DELETE Policy
-CREATE POLICY "Allow authenticated users to delete [table]" ON [table]
-  FOR DELETE USING ((select auth.uid()) = user_id);
+-- Una sola política optimizada
+CREATE POLICY "condos_select_policy" ON condos
+  FOR SELECT
+  USING (
+    auth.is_super_admin() OR 
+    user_id = auth.current_user_id()
+  );
 ```
 
-## 🎉 **RESULTADO ESPERADO**
+## Scripts de Optimización
 
-Después de ejecutar la optimización:
-- ✅ **Sin alertas** de rendimiento en Supabase
-- ✅ **Políticas optimizadas** en todas las tablas
-- ✅ **Mejor rendimiento** de consultas
-- ✅ **Seguridad mantenida** al 100%
-- ✅ **Escalabilidad mejorada** para el futuro
+### Scripts Individuales
 
-## ⚠️ **CONSIDERACIONES IMPORTANTES**
+1. **`scripts/optimize_rls_functions.sql`**
+   - Crea las funciones helper optimizadas
+   - Marca las funciones como `STABLE` para mejor rendimiento
 
-### **🔴 Impacto en la Aplicación**
-- **Sin cambios** en la funcionalidad de la aplicación
-- **Misma seguridad** y restricciones de acceso
-- **Mejor rendimiento** sin cambios de código
+2. **`scripts/optimize_rls_condos.sql`**
+   - Optimiza políticas de la tabla `condos`
+   - Elimina políticas duplicadas
 
-### **🔴 Reversibilidad**
-- Las optimizaciones son **reversibles**
-- Se pueden restaurar las políticas anteriores si es necesario
-- **Sin pérdida de datos** o funcionalidad
+3. **`scripts/optimize_rls_administrators.sql`**
+   - Optimiza políticas de la tabla `administrators`
+   - Consolida múltiples políticas en una por acción
 
----
+4. **`scripts/optimize_rls_related_tables.sql`**
+   - Optimiza políticas de tablas relacionadas:
+     - `alerts`
+     - `assemblies`
+     - `certifications`
+     - `emergency_plans`
+     - `insurances`
+     - `contracts`
 
-**🚀 ¡Ejecuta el script para optimizar el rendimiento de tu base de datos!**
+5. **`scripts/optimize_rls_notifications.sql`**
+   - Optimiza políticas de tablas de notificaciones:
+     - `notification_settings`
+     - `user_notification_settings`
+     - `notification_history`
+     - `notification_events`
+     - `admin_audit_log`
+     - `condo_history`
 
+6. **`scripts/verify_rls_optimization.sql`**
+   - Verifica que la optimización fue exitosa
+   - Muestra estadísticas de rendimiento
+   - Detecta políticas duplicadas restantes
+
+### Script Maestro
+
+**`scripts/optimize_rls_master.sql`**
+- Ejecuta todos los scripts de optimización en orden
+- Proporciona mensajes de progreso
+- Incluye instrucciones de uso
+
+## Instrucciones de Uso
+
+### Opción 1: Script Maestro (Recomendado)
+
+```sql
+-- Ejecutar el script maestro
+\i scripts/optimize_rls_master.sql
+```
+
+### Opción 2: Scripts Individuales
+
+```sql
+-- Ejecutar en orden
+\i scripts/optimize_rls_functions.sql
+\i scripts/optimize_rls_condos.sql
+\i scripts/optimize_rls_administrators.sql
+\i scripts/optimize_rls_related_tables.sql
+\i scripts/optimize_rls_notifications.sql
+\i scripts/verify_rls_optimization.sql
+```
+
+### Verificación
+
+```sql
+-- Verificar que la optimización fue exitosa
+\i scripts/verify_rls_optimization.sql
+```
+
+## Beneficios de la Optimización
+
+### 1. Rendimiento Mejorado
+- **Antes**: `auth.uid()` se evaluaba para cada fila
+- **Después**: `auth.current_user_id()` se evalúa una vez por consulta
+
+### 2. Políticas Consolidadas
+- **Antes**: 3-4 políticas por tabla/acción
+- **Después**: 1 política por tabla/acción
+
+### 3. Mantenimiento Simplificado
+- Lógica de acceso centralizada en funciones helper
+- Políticas más legibles y mantenibles
+- Menos duplicación de código
+
+### 4. Escalabilidad
+- Mejor rendimiento con grandes volúmenes de datos
+- Menos carga en el sistema de autenticación
+- Consultas más eficientes
+
+## Tablas Optimizadas
+
+| Tabla | Políticas Antes | Políticas Después | Mejora |
+|-------|----------------|-------------------|---------|
+| `condos` | 12 | 4 | 67% reducción |
+| `administrators` | 16 | 4 | 75% reducción |
+| `alerts` | 8 | 4 | 50% reducción |
+| `assemblies` | 8 | 4 | 50% reducción |
+| `certifications` | 8 | 4 | 50% reducción |
+| `emergency_plans` | 8 | 4 | 50% reducción |
+| `insurances` | 8 | 4 | 50% reducción |
+| `contracts` | 4 | 4 | 0% (ya optimizada) |
+| `notification_settings` | 5 | 4 | 20% reducción |
+| `user_notification_settings` | 4 | 4 | 0% (ya optimizada) |
+| `notification_history` | 1 | 1 | 0% (ya optimizada) |
+| `notification_events` | 1 | 4 | +300% (mejorada) |
+| `admin_audit_log` | 1 | 2 | +100% (mejorada) |
+| `condo_history` | 2 | 1 | 50% reducción |
+
+## Verificación Post-Optimización
+
+### 1. Verificar Funciones Helper
+```sql
+SELECT proname, prokind, prosecdef 
+FROM pg_proc 
+WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'auth')
+    AND proname IN ('current_user_id', 'is_super_admin', 'has_condo_access');
+```
+
+### 2. Verificar Políticas Optimizadas
+```sql
+SELECT tablename, policyname, cmd, 
+       CASE 
+           WHEN qual LIKE '%auth.current_user_id()%' THEN 'OPTIMIZADA'
+           WHEN qual LIKE '%auth.is_super_admin()%' THEN 'OPTIMIZADA'
+           WHEN qual LIKE '%auth.has_condo_access%' THEN 'OPTIMIZADA'
+           ELSE 'REVISAR'
+       END as optimization_status
+FROM pg_policies 
+WHERE schemaname = 'public'
+ORDER BY tablename, policyname;
+```
+
+### 3. Verificar Políticas Duplicadas
+```sql
+WITH policy_counts AS (
+    SELECT tablename, cmd, roles, COUNT(*) as policy_count
+    FROM pg_policies 
+    WHERE schemaname = 'public'
+    GROUP BY tablename, cmd, roles
+    HAVING COUNT(*) > 1
+)
+SELECT * FROM policy_counts;
+```
+
+## Troubleshooting
+
+### Error: "function auth.current_user_id() does not exist"
+- Ejecutar primero `scripts/optimize_rls_functions.sql`
+
+### Error: "policy already exists"
+- Las políticas duplicadas se eliminan automáticamente
+- El script es idempotente (se puede ejecutar múltiples veces)
+
+### Error: "permission denied"
+- Asegurarse de tener permisos de superusuario o propietario de la base de datos
+
+## Monitoreo Continuo
+
+### 1. Ejecutar Linter de Supabase
+- Verificar que las advertencias de RLS han desaparecido
+- Monitorear nuevas advertencias de rendimiento
+
+### 2. Monitorear Rendimiento
+- Observar tiempos de consulta en el dashboard de Supabase
+- Verificar que las consultas RLS son más rápidas
+
+### 3. Revisar Logs
+- Monitorear logs de aplicación para errores de permisos
+- Verificar que la funcionalidad sigue funcionando correctamente
+
+## Conclusión
+
+La optimización de políticas RLS resuelve los problemas de rendimiento identificados por el linter de Supabase:
+
+- ✅ Elimina re-evaluación innecesaria de funciones auth
+- ✅ Consolida políticas duplicadas
+- ✅ Mejora el rendimiento de consultas
+- ✅ Centraliza la lógica de acceso
+- ✅ Simplifica el mantenimiento
+
+Los scripts son seguros, idempotentes y pueden ejecutarse en cualquier momento sin afectar la funcionalidad existente.

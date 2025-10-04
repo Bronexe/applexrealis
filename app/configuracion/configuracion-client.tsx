@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Settings, Bell, Calendar, AlertTriangle } from "lucide-react"
+import { Settings, Bell, Calendar, AlertTriangle, ClipboardList, Building } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface NotificationSettings {
@@ -19,16 +19,20 @@ interface NotificationSettings {
   expiration_notifications_enabled: boolean
   expiration_days_before: number
   expiration_email_enabled: boolean
-  expiration_sms_enabled: boolean
   // Recordatorios de asambleas
   assembly_reminders_enabled: boolean
   assembly_reminder_days_before: number
   assembly_reminder_email_enabled: boolean
-  assembly_reminder_sms_enabled: boolean
+  // Notificaciones de gestiones
+  gestiones_notifications_enabled: boolean
+  gestiones_email_enabled: boolean
+  gestiones_reminder_days_before: number
+  // Notificaciones de condos
+  condos_notifications_enabled: boolean
+  condos_email_enabled: boolean
   // Notificaciones generales
   general_notifications_enabled: boolean
   general_email_enabled: boolean
-  general_sms_enabled: boolean
   // Configuración de tiempo
   notification_time: string
   timezone: string
@@ -40,14 +44,16 @@ export default function ConfiguracionClient() {
     expiration_notifications_enabled: true,
     expiration_days_before: 30,
     expiration_email_enabled: true,
-    expiration_sms_enabled: false,
     assembly_reminders_enabled: true,
     assembly_reminder_days_before: 7,
     assembly_reminder_email_enabled: true,
-    assembly_reminder_sms_enabled: false,
+    gestiones_notifications_enabled: true,
+    gestiones_email_enabled: true,
+    gestiones_reminder_days_before: 3,
+    condos_notifications_enabled: true,
+    condos_email_enabled: true,
     general_notifications_enabled: true,
     general_email_enabled: true,
-    general_sms_enabled: false,
     notification_time: "09:00",
     timezone: "America/Santiago"
   })
@@ -85,14 +91,16 @@ export default function ConfiguracionClient() {
             expiration_notifications_enabled: settingsData.expiration_notifications_enabled,
             expiration_days_before: settingsData.expiration_days_before,
             expiration_email_enabled: settingsData.expiration_email_enabled,
-            expiration_sms_enabled: settingsData.expiration_sms_enabled,
             assembly_reminders_enabled: settingsData.assembly_reminders_enabled,
             assembly_reminder_days_before: settingsData.assembly_reminder_days_before,
             assembly_reminder_email_enabled: settingsData.assembly_reminder_email_enabled,
-            assembly_reminder_sms_enabled: settingsData.assembly_reminder_sms_enabled,
+            gestiones_notifications_enabled: settingsData.gestiones_notifications_enabled || true,
+            gestiones_email_enabled: settingsData.gestiones_email_enabled || true,
+            gestiones_reminder_days_before: settingsData.gestiones_reminder_days_before || 3,
+            condos_notifications_enabled: settingsData.condos_notifications_enabled || true,
+            condos_email_enabled: settingsData.condos_email_enabled || true,
             general_notifications_enabled: settingsData.general_notifications_enabled,
             general_email_enabled: settingsData.general_email_enabled,
-            general_sms_enabled: settingsData.general_sms_enabled,
             notification_time: settingsData.notification_time,
             timezone: settingsData.timezone
           })
@@ -130,14 +138,16 @@ export default function ConfiguracionClient() {
         expiration_notifications_enabled: settings.expiration_notifications_enabled,
         expiration_days_before: settings.expiration_days_before,
         expiration_email_enabled: settings.expiration_email_enabled,
-        expiration_sms_enabled: settings.expiration_sms_enabled,
         assembly_reminders_enabled: settings.assembly_reminders_enabled,
         assembly_reminder_days_before: settings.assembly_reminder_days_before,
         assembly_reminder_email_enabled: settings.assembly_reminder_email_enabled,
-        assembly_reminder_sms_enabled: settings.assembly_reminder_sms_enabled,
+        gestiones_notifications_enabled: settings.gestiones_notifications_enabled,
+        gestiones_email_enabled: settings.gestiones_email_enabled,
+        gestiones_reminder_days_before: settings.gestiones_reminder_days_before,
+        condos_notifications_enabled: settings.condos_notifications_enabled,
+        condos_email_enabled: settings.condos_email_enabled,
         general_notifications_enabled: settings.general_notifications_enabled,
         general_email_enabled: settings.general_email_enabled,
-        general_sms_enabled: settings.general_sms_enabled,
         notification_time: settings.notification_time,
         timezone: settings.timezone
       }
@@ -240,32 +250,17 @@ export default function ConfiguracionClient() {
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Notificaciones por email</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recibe notificaciones en tu correo electrónico
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.expiration_email_enabled}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, expiration_email_enabled: checked }))}
-                    />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Notificaciones por email</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Recibe notificaciones en tu correo electrónico
+                    </p>
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Notificaciones por SMS</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recibe notificaciones por mensaje de texto
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.expiration_sms_enabled}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, expiration_sms_enabled: checked }))}
-                    />
-                  </div>
+                  <Switch
+                    checked={settings.expiration_email_enabled}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, expiration_email_enabled: checked }))}
+                  />
                 </div>
               </>
             )}
@@ -312,34 +307,118 @@ export default function ConfiguracionClient() {
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Recordatorios por email</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recibe recordatorios en tu correo electrónico
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.assembly_reminder_email_enabled}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, assembly_reminder_email_enabled: checked }))}
-                    />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Recordatorios por email</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Recibe recordatorios en tu correo electrónico
+                    </p>
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Recordatorios por SMS</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Recibe recordatorios por mensaje de texto
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.assembly_reminder_sms_enabled}
-                      onCheckedChange={(checked) => setSettings(prev => ({ ...prev, assembly_reminder_sms_enabled: checked }))}
-                    />
-                  </div>
+                  <Switch
+                    checked={settings.assembly_reminder_email_enabled}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, assembly_reminder_email_enabled: checked }))}
+                  />
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Notificaciones de Gestiones */}
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              Notificaciones de Gestiones
+            </CardTitle>
+            <CardDescription>
+              Configura las notificaciones para gestiones y trámites
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Habilitar notificaciones de gestiones</Label>
+                <p className="text-sm text-muted-foreground">
+                  Recibe notificaciones sobre el estado de tus gestiones
+                </p>
+              </div>
+              <Switch
+                checked={settings.gestiones_notifications_enabled}
+                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, gestiones_notifications_enabled: checked }))}
+              />
+            </div>
+
+            {settings.gestiones_notifications_enabled && (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="gestiones_days">Días antes del recordatorio</Label>
+                  <Input
+                    id="gestiones_days"
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={settings.gestiones_reminder_days_before}
+                    onChange={(e) => setSettings(prev => ({ ...prev, gestiones_reminder_days_before: parseInt(e.target.value) || 3 }))}
+                    className="rounded-xl"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Notificaciones por email</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Recibe notificaciones en tu correo electrónico
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.gestiones_email_enabled}
+                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, gestiones_email_enabled: checked }))}
+                  />
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Notificaciones de Condos */}
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Notificaciones de Condominios
+            </CardTitle>
+            <CardDescription>
+              Configura las notificaciones para actividades de condominios
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Habilitar notificaciones de condominios</Label>
+                <p className="text-sm text-muted-foreground">
+                  Recibe notificaciones sobre actividades de tus condominios
+                </p>
+              </div>
+              <Switch
+                checked={settings.condos_notifications_enabled}
+                onCheckedChange={(checked) => setSettings(prev => ({ ...prev, condos_notifications_enabled: checked }))}
+              />
+            </div>
+
+            {settings.condos_notifications_enabled && (
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Notificaciones por email</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Recibe notificaciones en tu correo electrónico
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.condos_email_enabled}
+                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, condos_email_enabled: checked }))}
+                />
+              </div>
             )}
           </CardContent>
         </Card>
@@ -370,32 +449,17 @@ export default function ConfiguracionClient() {
             </div>
 
             {settings.general_notifications_enabled && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Notificaciones por email</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Recibe notificaciones en tu correo electrónico
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.general_email_enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, general_email_enabled: checked }))}
-                  />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Notificaciones por email</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Recibe notificaciones en tu correo electrónico
+                  </p>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Notificaciones por SMS</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Recibe notificaciones por mensaje de texto
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.general_sms_enabled}
-                    onCheckedChange={(checked) => setSettings(prev => ({ ...prev, general_sms_enabled: checked }))}
-                  />
-                </div>
+                <Switch
+                  checked={settings.general_email_enabled}
+                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, general_email_enabled: checked }))}
+                />
               </div>
             )}
           </CardContent>
@@ -455,4 +519,21 @@ export default function ConfiguracionClient() {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

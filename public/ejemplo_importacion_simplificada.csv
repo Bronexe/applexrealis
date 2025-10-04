@@ -1,0 +1,7 @@
+unidad_codigo,nombre_completo,tipo_uso,alicuota,tipo_titular,email,telefono,observaciones
+A-101,Juan Pérez,Departamento,0.155,PersonaNatural,juan@email.com,+56912345678,Unidad principal (15.5%)
+A-102,María González,Departamento;Estacionamiento,0,01138,PersonaNatural,maria@email.com,+56987654321,Co-titular (1.138%)
+B-201,Empresa ABC S.A.,Departamento,0.20,PersonaJuridica,contacto@abc.cl,+56955555555,Empresa propietaria (20%)
+B-202,Luis Fernández,Bodega,0.00875,PersonaNatural,luis@email.com,,Bodega individual (0.875%)
+C-301,Ana Silva,Departamento;Estacionamiento,0.25,PersonaNatural,ana@silva.com,+56944444444,Inversión inmobiliaria (25%)
+C-302,Carlos López,Estacionamiento,,PersonaNatural,carlos@lopez.com,+56933333333,Solo estacionamiento

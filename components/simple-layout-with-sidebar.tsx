@@ -89,3 +89,23 @@ export default function SimpleLayoutWithSidebar({ children, currentPath }: Simpl
   )
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

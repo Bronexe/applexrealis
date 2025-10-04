@@ -76,7 +76,6 @@ export function AssemblyActions({ assembly, condoId }: AssemblyActionsProps) {
         .from("assemblies")
         .delete()
         .eq("id", assembly.id)
-        .eq("condo_id", condoId)
 
       if (error) throw error
 
@@ -133,4 +132,14 @@ export function AssemblyActions({ assembly, condoId }: AssemblyActionsProps) {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+
+
 

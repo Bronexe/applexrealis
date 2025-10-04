@@ -52,7 +52,41 @@ export default function NewAssemblyPage({ params }: { params: Promise<{ condoId:
 
       router.push(`/condos/${condoId}/asambleas`)
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Error al crear la asamblea")
+      console.error('Error completo al crear asamblea:', error)
+      console.error('Tipo de error:', typeof error)
+      console.error('Error stringificado:', JSON.stringify(error, null, 2))
+      
+      let errorMessage = "Error al crear la asamblea"
+      
+      if (error instanceof Error) {
+        errorMessage = error.message
+        console.log('Error message:', error.message)
+        
+        // Proporcionar mensajes más específicos
+        if (error.message.includes('permission denied')) {
+          errorMessage = "No tienes permisos para crear asambleas"
+        } else if (error.message.includes('foreign key')) {
+          errorMessage = "Error de referencia: el condominio no existe"
+        } else if (error.message.includes('not null')) {
+          errorMessage = "Faltan campos requeridos"
+        } else if (error.message.includes('unique')) {
+          errorMessage = "Ya existe una asamblea con estos datos"
+        } else if (error.message.includes('JWT')) {
+          errorMessage = "Error de autenticación. Por favor, inicia sesión nuevamente"
+        } else if (error.message.includes('RLS')) {
+          errorMessage = "Error de permisos. Verifica que tienes acceso a este condominio"
+        }
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        // Manejar errores de Supabase que no son instancias de Error
+        errorMessage = String(error.message)
+        console.log('Error object message:', error.message)
+      } else {
+        // Si el error es completamente desconocido
+        errorMessage = "Error desconocido al crear la asamblea"
+        console.log('Error desconocido:', error)
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }

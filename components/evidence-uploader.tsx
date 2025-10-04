@@ -5,8 +5,9 @@ import type React from "react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Upload, FileText, X, Download } from "lucide-react"
-import { uploadFile, deleteFile, getSignedUrl } from "@/lib/actions/storage"
+import { Upload, FileText, X, Download, Loader2 } from "lucide-react"
+import { uploadFileWithRetryAPI } from "@/lib/actions/upload-api"
+import { deleteFile, getSignedUrl } from "@/lib/actions/storage-direct"
 import { useToast } from "@/hooks/use-toast"
 
 interface EvidenceUploaderProps {
@@ -34,8 +35,12 @@ export function EvidenceUploader({ condoId, module, onUploadComplete, currentFil
       formData.append("condoId", condoId)
       formData.append("module", module)
 
-      const result = await uploadFile(formData)
+      const result = await uploadFileWithRetryAPI(formData, 2)
       onUploadComplete(result.url)
+
+      // NO registrar la subida en el historial aquí
+      // Se registrará automáticamente cuando se guarde el registro principal
+      // await logFileUpload(condoId, file.name, file.size, file.type)
 
       toast({
         title: "Archivo subido",
@@ -110,23 +115,32 @@ export function EvidenceUploader({ condoId, module, onUploadComplete, currentFil
           </div>
         </div>
       ) : (
-        <div className="border-2 border-dashed border-border rounded-xl p-6 text-center">
-          <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Arrastra un archivo PDF aquí o haz clic para seleccionar</p>
-            <p className="text-xs text-muted-foreground">Máximo 20MB</p>
-          </div>
-          <Input
-            type="file"
-            accept=".pdf"
-            onChange={handleFileUpload}
-            disabled={isUploading}
-            className="mt-4 rounded-xl"
-          />
+        <div className="relative border-2 border-dashed border-border rounded-xl p-6 text-center">
+          {isUploading ? (
+            <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-xl">
+              <div className="flex items-center gap-2 text-blue-600">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="text-sm font-medium">Subiendo archivo...</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Arrastra un archivo PDF aquí o haz clic para seleccionar</p>
+                <p className="text-xs text-muted-foreground">Máximo 20MB</p>
+              </div>
+              <Input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                disabled={isUploading}
+                className="mt-4 rounded-xl"
+              />
+            </>
+          )}
         </div>
       )}
-
-      {isUploading && <p className="text-sm text-muted-foreground">Subiendo archivo...</p>}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

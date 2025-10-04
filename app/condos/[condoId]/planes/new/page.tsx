@@ -31,9 +31,17 @@ export default function NewPlanPage({ params }: { params: Promise<{ condoId: str
     const supabase = createClient()
 
     try {
+      // Verificar autenticación antes de proceder
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !user) {
+        throw new Error("No se pudo obtener la información del usuario")
+      }
+
       const { error } = await supabase.from("emergency_plans").insert([
         {
           condo_id: condoId,
+          user_id: user.id, // Agregar user_id requerido
           version,
           professional_name: professionalName,
           updated_at: updatedAt,

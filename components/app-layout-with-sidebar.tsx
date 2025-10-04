@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "@/components/ui/sidebar-new";
+import { MobileLayout } from "@/components/mobile-layout";
 import {
   IconDashboard,
   IconBuilding,
@@ -11,6 +12,7 @@ import {
   IconSettings,
   IconReportAnalytics,
   IconMail,
+  IconChecklist,
 } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,8 @@ import Link from "next/link";
 import { LogoutButton } from "@/components/logout-button";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { isSuperAdmin } from "@/lib/actions/super-admin";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AppLayoutWithSidebarProps {
   children: React.ReactNode;
@@ -29,24 +33,47 @@ export default function AppLayoutWithSidebar({ children, currentPath }: AppLayou
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [isSuper, setIsSuper] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const getUser = async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      
+      // Verificar si es super administrador
+      if (user) {
+        const superAdminStatus = await isSuperAdmin();
+        setIsSuper(superAdminStatus);
+      }
+      
       setIsLoadingUser(false);
     };
 
     getUser();
   }, []);
   
-  const links = [
+  const baseLinks = [
     {
       label: "Dashboard",
       href: "/dashboard",
       icon: (
         <IconDashboard className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    {
+      label: "Condominios",
+      href: "/condos",
+      icon: (
+        <IconBuilding className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    {
+      label: "Gestiones",
+      href: "/gestiones",
+      icon: (
+        <IconChecklist className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
       ),
     },
     {
@@ -72,6 +99,23 @@ export default function AppLayoutWithSidebar({ children, currentPath }: AppLayou
     },
   ];
 
+  // Agregar enlace de super administrador si el usuario tiene permisos
+  const superAdminLink = {
+    label: "Super Admin",
+    href: "/super-admin",
+    icon: (
+      <IconShield className="h-5 w-5 shrink-0 text-destructive" />
+    ),
+  };
+
+  const links = isSuper ? [superAdminLink, ...baseLinks] : baseLinks;
+
+  // En móviles, usar el layout móvil
+  if (isMobile) {
+    return <MobileLayout currentPath={currentPath}>{children}</MobileLayout>;
+  }
+
+  // En desktop, usar el sidebar tradicional
   return (
     <div className="h-screen flex bg-background">
       <Sidebar open={open} setOpen={setOpen} className="h-full sidebar-full-height">

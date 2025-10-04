@@ -36,6 +36,23 @@ export default async function SegurosPage({ params }: { params: Promise<{ condoI
     return new Date(validTo) < new Date()
   }
 
+  const getInsuranceTypeLabel = (type: string) => {
+    switch (type) {
+      case "incendio-espacios-comunes":
+        return "Incendio Espacios Comunes"
+      case "os10-vigilantes-guardias":
+        return "OS10 Vigilantes y Guardias"
+      case "sismos":
+        return "Sismos"
+      case "responsabilidad-civil":
+        return "Responsabilidad Civil"
+      case "hogar":
+        return "Hogar"
+      default:
+        return type || "No especificado"
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -62,6 +79,7 @@ export default async function SegurosPage({ params }: { params: Promise<{ condoI
               <TableHeader>
                 <TableRow>
                   <TableHead>Número de Póliza</TableHead>
+                  <TableHead>Tipo de Seguro</TableHead>
                   <TableHead>Compañía</TableHead>
                   <TableHead>Vigencia</TableHead>
                   <TableHead>Estado</TableHead>
@@ -73,6 +91,11 @@ export default async function SegurosPage({ params }: { params: Promise<{ condoI
                 {insurances.map((insurance) => (
                   <TableRow key={insurance.id}>
                     <TableCell className="font-medium">{insurance.policy_number || "Sin número"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="rounded-lg">
+                        {getInsuranceTypeLabel(insurance.insurance_type)}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Building className="h-4 w-4 text-muted-foreground" />

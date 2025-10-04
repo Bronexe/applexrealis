@@ -38,3 +38,23 @@ export default async function ReportesPage() {
   return <ReportesFallbackClient condos={condos} hasError={hasError} />
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

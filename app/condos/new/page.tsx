@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { checkUserCanCreateCondos } from "@/lib/actions/super-admin"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,15 +13,21 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { chileData, getCommunesByRegion } from "@/lib/data/chile-regions"
 
 export default function NewCondoPage() {
   const [name, setName] = useState("")
-  const [comuna, setComuna] = useState("")
+  const [address, setAddress] = useState("")
+  const [regionId, setRegionId] = useState("")
+  const [communeId, setCommuneId] = useState("")
   const [destinoUso, setDestinoUso] = useState("")
   const [cantidadCopropietarios, setCantidadCopropietarios] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+
+  // Obtener comunas disponibles según la región seleccionada
+  const availableCommunes = regionId ? getCommunesByRegion(regionId) : []
 
   const destinoUsoOptions = [
     { value: "habitacional", label: "Habitacional" },
@@ -47,12 +54,28 @@ export default function NewCondoPage() {
         throw new Error("No se pudo obtener la información del usuario")
       }
 
+      // Verificar si el usuario puede crear más condominios
+      const limitCheck = await checkUserCanCreateCondos(user.id)
+      if (!limitCheck.canCreate) {
+        throw new Error(
+          `Has alcanzado el límite de condominios (${limitCheck.currentCount}/${limitCheck.limitCount}). ` +
+          `Contacta al administrador para aumentar tu límite.`
+        )
+      }
+
+      // Obtener el nombre de la comuna seleccionada
+      const selectedCommune = communeId ? availableCommunes.find(c => c.id === communeId) : null
+      const communeName = selectedCommune ? selectedCommune.name : null
+
       // Crear condominio con user_id del usuario actual
       const { data, error } = await supabase
         .from("condos")
         .insert([{ 
           name, 
-          comuna, 
+          address,
+          region_id: regionId || null,
+          commune_id: communeId || null,
+          comuna: communeName, // Agregar el nombre de la comuna
           destino_uso: destinoUso, 
           cantidad_copropietarios: cantidadCopropietarios ? parseInt(cantidadCopropietarios) : null,
           user_id: user.id 
@@ -108,15 +131,60 @@ export default function NewCondoPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="comuna">Comuna</Label>
+                    <Label htmlFor="address">Dirección *</Label>
                     <Input
-                      id="comuna"
+                      id="address"
                       type="text"
-                      placeholder="Ej: Las Condes"
-                      value={comuna}
-                      onChange={(e) => setComuna(e.target.value)}
+                      placeholder="Ej: Reñaca Norte 25"
+                      required
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
                       className="rounded-xl"
                     />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="region">Región *</Label>
+                    <Select
+                      value={regionId}
+                      onValueChange={(value) => {
+                        setRegionId(value)
+                        setCommuneId("") // Limpiar comuna cuando cambie la región
+                      }}
+                      required
+                    >
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Selecciona una región" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {chileData.regions.map((region) => (
+                          <SelectItem key={region.id} value={region.id}>
+                            {region.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="commune">Comuna *</Label>
+                    <Select
+                      value={communeId}
+                      onValueChange={setCommuneId}
+                      required
+                      disabled={!regionId}
+                    >
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder={regionId ? "Selecciona una comuna" : "Primero selecciona una región"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableCommunes.map((commune) => (
+                          <SelectItem key={commune.id} value={commune.id}>
+                            {commune.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid gap-2">

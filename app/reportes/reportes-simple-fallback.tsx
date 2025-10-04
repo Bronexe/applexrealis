@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,8 +8,36 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line
+} from "recharts"
+import { 
+  FileText, 
+  Users, 
+  FileCheck, 
+  Shield, 
+  Calendar, 
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Building,
+  ClipboardList
+} from "lucide-react"
 
 interface Condo {
   id: string
@@ -23,6 +51,9 @@ interface ReportData {
   include_plans: boolean
   include_certifications: boolean
   include_insurances: boolean
+  include_contracts: boolean
+  include_copropietarios: boolean
+  include_gestiones: boolean
   date_from: string
   date_to: string
   custom_title: string
@@ -30,6 +61,22 @@ interface ReportData {
   include_expired: boolean
   include_expiring_soon: boolean
   expiring_days: number
+}
+
+interface ComplianceStats {
+  totalDocuments: number
+  expiredDocuments: number
+  expiringSoon: number
+  compliantDocuments: number
+  complianceRate: number
+  contractsCount: number
+  copropietariosCount: number
+}
+
+interface ChartData {
+  name: string
+  value: number
+  color: string
 }
 
 interface ReportesSimpleFallbackProps {
@@ -44,6 +91,9 @@ export function ReportesSimpleFallback({ condos, hasError }: ReportesSimpleFallb
     include_plans: true,
     include_certifications: true,
     include_insurances: true,
+    include_contracts: true,
+    include_copropietarios: true,
+    include_gestiones: true,
     date_from: "",
     date_to: "",
     custom_title: "",
@@ -55,7 +105,48 @@ export function ReportesSimpleFallback({ condos, hasError }: ReportesSimpleFallb
   
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [complianceStats, setComplianceStats] = useState<ComplianceStats | null>(null)
+  const [chartData, setChartData] = useState<ChartData[]>([])
   const { toast } = useToast()
+
+  // Colores del proyecto (dorado/amber)
+  const COLORS = {
+    primary: '#BF7F11',
+    secondary: '#D4AF37',
+    success: '#10B981',
+    warning: '#F59E0B',
+    danger: '#EF4444',
+    info: '#3B82F6'
+  }
+
+  const pieColors = [COLORS.primary, COLORS.secondary, COLORS.success, COLORS.warning, COLORS.danger]
+
+  // Cargar estadísticas de cumplimiento cuando se selecciona un condominio
+  useEffect(() => {
+    if (reportData.condo_id) {
+      loadComplianceStats(reportData.condo_id)
+    }
+  }, [reportData.condo_id])
+
+  const loadComplianceStats = async (condoId: string) => {
+    try {
+      const response = await fetch(`/api/reports/compliance-stats?condo_id=${condoId}`)
+      if (response.ok) {
+        const stats = await response.json()
+        setComplianceStats(stats)
+        
+        // Preparar datos para gráficos
+        const chartData = [
+          { name: 'Documentos Válidos', value: stats.compliantDocuments, color: COLORS.success },
+          { name: 'Vencidos', value: stats.expiredDocuments, color: COLORS.danger },
+          { name: 'Próximos a Vencer', value: stats.expiringSoon, color: COLORS.warning }
+        ]
+        setChartData(chartData)
+      }
+    } catch (error) {
+      console.error('Error cargando estadísticas:', error)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,7 +160,9 @@ export function ReportesSimpleFallback({ condos, hasError }: ReportesSimpleFallb
       }
 
       if (!reportData.include_assemblies && !reportData.include_plans && 
-          !reportData.include_certifications && !reportData.include_insurances) {
+          !reportData.include_certifications && !reportData.include_insurances &&
+          !reportData.include_contracts && !reportData.include_copropietarios && 
+          !reportData.include_gestiones) {
         throw new Error("Debe seleccionar al menos un tipo de documento")
       }
 
@@ -155,9 +248,34 @@ export function ReportesSimpleFallback({ condos, hasError }: ReportesSimpleFallb
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Reportes</h2>
-        <p className="text-muted-foreground">Genera reportes personalizados en PDF con la información de cada condominio</p>
+      {/* Header mejorado con identidad visual */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-secondary/5 to-primary/10 p-8 border border-primary/20">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+        <div className="relative">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+              <FileText className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-primary">Reportes de Cumplimiento</h2>
+              <p className="text-muted-foreground">Genera reportes personalizados en PDF con estadísticas visuales</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <Badge variant="outline" className="border-primary/30 text-primary">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Incluye Gráficos
+            </Badge>
+            <Badge variant="outline" className="border-primary/30 text-primary">
+              <Users className="h-3 w-3 mr-1" />
+              Copropietarios
+            </Badge>
+            <Badge variant="outline" className="border-primary/30 text-primary">
+              <FileText className="h-3 w-3 mr-1" />
+              Contratos
+            </Badge>
+          </div>
+        </div>
       </div>
 
       {/* Mensaje de error si hay problemas con la base de datos */}
@@ -259,55 +377,230 @@ export function ReportesSimpleFallback({ condos, hasError }: ReportesSimpleFallb
                 )}
               </div>
 
+              {/* Estadísticas de Cumplimiento */}
+              {complianceStats && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <Label className="text-lg font-semibold">Estadísticas de Cumplimiento</Label>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Card className="border-l-4 border-l-success">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-success" />
+                          <span className="text-sm font-medium">Documentos Válidos</span>
+                        </div>
+                        <p className="text-2xl font-bold text-success mt-1">{complianceStats.compliantDocuments}</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-l-4 border-l-danger">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-danger" />
+                          <span className="text-sm font-medium">Vencidos</span>
+                        </div>
+                        <p className="text-2xl font-bold text-danger mt-1">{complianceStats.expiredDocuments}</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-l-4 border-l-warning">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-warning" />
+                          <span className="text-sm font-medium">Próximos a Vencer</span>
+                        </div>
+                        <p className="text-2xl font-bold text-warning mt-1">{complianceStats.expiringSoon}</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-l-4 border-l-primary">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">% Cumplimiento</span>
+                        </div>
+                        <p className="text-2xl font-bold text-primary mt-1">{complianceStats.complianceRate.toFixed(1)}%</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Gráficos */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Gráfico de Barras */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <BarChart className="h-5 w-5 text-primary" />
+                          Estado de Documentos
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" />
+                              <YAxis />
+                              <Tooltip />
+                              <Bar dataKey="value" fill={COLORS.primary} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Gráfico Circular */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <PieChart className="h-5 w-5 text-primary" />
+                          Distribución de Cumplimiento
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={chartData}
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={80}
+                                dataKey="value"
+                                label={({ name, value }) => `${name}: ${value}`}
+                              >
+                                {chartData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Información adicional */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="bg-gradient-to-r from-primary/5 to-secondary/5">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Building className="h-4 w-4 text-primary" />
+                          <span className="font-medium">Contratos Activos</span>
+                        </div>
+                        <p className="text-2xl font-bold text-primary">{complianceStats.contractsCount}</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-r from-primary/5 to-secondary/5">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="h-4 w-4 text-primary" />
+                          <span className="font-medium">Copropietarios</span>
+                        </div>
+                        <p className="text-2xl font-bold text-primary">{complianceStats.copropietariosCount}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              )}
+
               {/* Tipos de Documentos */}
               <div className="grid gap-2">
                 <Label>Tipos de Documentos a Incluir *</Label>
-                <div className="grid grid-cols-2 gap-4 p-4 border rounded-xl bg-muted/50">
-                  <div className="flex items-center space-x-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-6 border rounded-2xl bg-gradient-to-br from-primary/5 to-secondary/5">
+                  <div className="flex items-center space-x-3 p-3 rounded-xl bg-background/80 hover:bg-primary/5 transition-colors">
                     <Checkbox
                       id="assemblies"
                       checked={reportData.include_assemblies}
                       onCheckedChange={(checked) => updateReportData("include_assemblies", checked)}
+                      className="border-primary/30"
                     />
-                    <Label htmlFor="assemblies" className="flex items-center gap-2">
-                      <span>📅</span>
+                    <Label htmlFor="assemblies" className="flex items-center gap-2 cursor-pointer">
+                      <Calendar className="h-4 w-4 text-primary" />
                       Asambleas
                     </Label>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3 p-3 rounded-xl bg-background/80 hover:bg-primary/5 transition-colors">
                     <Checkbox
                       id="plans"
                       checked={reportData.include_plans}
                       onCheckedChange={(checked) => updateReportData("include_plans", checked)}
+                      className="border-primary/30"
                     />
-                    <Label htmlFor="plans" className="flex items-center gap-2">
-                      <span>📄</span>
+                    <Label htmlFor="plans" className="flex items-center gap-2 cursor-pointer">
+                      <FileText className="h-4 w-4 text-primary" />
                       Planes de Emergencia
                     </Label>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3 p-3 rounded-xl bg-background/80 hover:bg-primary/5 transition-colors">
                     <Checkbox
                       id="certifications"
                       checked={reportData.include_certifications}
                       onCheckedChange={(checked) => updateReportData("include_certifications", checked)}
+                      className="border-primary/30"
                     />
-                    <Label htmlFor="certifications" className="flex items-center gap-2">
-                      <span>✅</span>
+                    <Label htmlFor="certifications" className="flex items-center gap-2 cursor-pointer">
+                      <FileCheck className="h-4 w-4 text-primary" />
                       Certificaciones
                     </Label>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3 p-3 rounded-xl bg-background/80 hover:bg-primary/5 transition-colors">
                     <Checkbox
                       id="insurances"
                       checked={reportData.include_insurances}
                       onCheckedChange={(checked) => updateReportData("include_insurances", checked)}
+                      className="border-primary/30"
                     />
-                    <Label htmlFor="insurances" className="flex items-center gap-2">
-                      <span>🛡️</span>
+                    <Label htmlFor="insurances" className="flex items-center gap-2 cursor-pointer">
+                      <Shield className="h-4 w-4 text-primary" />
                       Seguros
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-3 p-3 rounded-xl bg-background/80 hover:bg-primary/5 transition-colors">
+                    <Checkbox
+                      id="contracts"
+                      checked={reportData.include_contracts}
+                      onCheckedChange={(checked) => updateReportData("include_contracts", checked)}
+                      className="border-primary/30"
+                    />
+                    <Label htmlFor="contracts" className="flex items-center gap-2 cursor-pointer">
+                      <FileText className="h-4 w-4 text-primary" />
+                      Contratos
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-3 p-3 rounded-xl bg-background/80 hover:bg-primary/5 transition-colors">
+                    <Checkbox
+                      id="copropietarios"
+                      checked={reportData.include_copropietarios}
+                      onCheckedChange={(checked) => updateReportData("include_copropietarios", checked)}
+                      className="border-primary/30"
+                    />
+                    <Label htmlFor="copropietarios" className="flex items-center gap-2 cursor-pointer">
+                      <Users className="h-4 w-4 text-primary" />
+                      Copropietarios
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-3 p-3 rounded-xl bg-background/80 hover:bg-primary/5 transition-colors">
+                    <Checkbox
+                      id="gestiones"
+                      checked={reportData.include_gestiones}
+                      onCheckedChange={(checked) => updateReportData("include_gestiones", checked)}
+                      className="border-primary/30"
+                    />
+                    <Label htmlFor="gestiones" className="flex items-center gap-2 cursor-pointer">
+                      <ClipboardList className="h-4 w-4 text-primary" />
+                      Gestiones
                     </Label>
                   </div>
                 </div>
@@ -425,7 +718,10 @@ export function ReportesSimpleFallback({ condos, hasError }: ReportesSimpleFallb
                         reportData.include_assemblies && "Asambleas",
                         reportData.include_plans && "Planes de Emergencia",
                         reportData.include_certifications && "Certificaciones",
-                        reportData.include_insurances && "Seguros"
+                        reportData.include_insurances && "Seguros",
+                        reportData.include_contracts && "Contratos",
+                        reportData.include_copropietarios && "Copropietarios",
+                        reportData.include_gestiones && "Gestiones"
                       ].filter(Boolean).join(", ")
                     }</p>
                     {reportData.date_from && reportData.date_to && (
@@ -440,14 +736,23 @@ export function ReportesSimpleFallback({ condos, hasError }: ReportesSimpleFallb
 
               {error && <p className="text-sm text-destructive">{error}</p>}
 
-              <div className="flex gap-4">
-                <Button type="submit" disabled={isLoading || !reportData.condo_id || condos.length === 0} className="rounded-xl">
-                  <span className="mr-2">📥</span>
-                  {isLoading ? "Generando..." : "Generar Reporte PDF"}
+              <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t">
+                <Button 
+                  type="submit" 
+                  disabled={isLoading || !reportData.condo_id || condos.length === 0} 
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white font-semibold h-12"
+                >
+                  <FileText className="mr-2 h-5 w-5" />
+                  {isLoading ? "Generando Reporte..." : "Generar Reporte PDF"}
                 </Button>
-                <Button type="button" onClick={handleExamplePDF} variant="outline" className="rounded-xl">
-                  <span className="mr-2">📄</span>
-                  Descargar PDF de Ejemplo
+                <Button 
+                  type="button" 
+                  onClick={handleExamplePDF} 
+                  variant="outline" 
+                  className="rounded-2xl border-primary/30 text-primary hover:bg-primary/5 h-12"
+                >
+                  <FileCheck className="mr-2 h-5 w-5" />
+                  PDF de Ejemplo
                 </Button>
               </div>
             </form>

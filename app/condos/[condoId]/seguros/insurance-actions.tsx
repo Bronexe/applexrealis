@@ -136,3 +136,23 @@ export function InsuranceActions({ insurance, condoId }: InsuranceActionsProps) 
   )
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
