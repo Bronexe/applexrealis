@@ -19,16 +19,34 @@ export default async function CondoDashboardPage({ params }: { params: Promise<{
   // Verificar si es super administrador
   const isSuperAdminUser = await isSuperAdmin()
 
-  // Get condo information and counts for each module
-  let condoQuery = supabase.from("condos").select("id, name, comuna, address, region_id, commune_id, cantidad_copropietarios, destino_uso, user_id").eq("id", condoId)
-  
-  // Si no es super admin, verificar que el condominio pertenece al usuario
-  if (!isSuperAdminUser) {
-    condoQuery = condoQuery.eq("user_id", user.id)
+  // Verificar acceso: propietario, asignado o super admin
+  const { data: condo, error: condoError } = await supabase
+    .from("condos")
+    .select("id, name, comuna, address, region_id, commune_id, cantidad_copropietarios, destino_uso, user_id")
+    .eq("id", condoId)
+    .single()
+
+  if (condoError || !condo) {
+    redirect("/dashboard")
   }
 
-  const [condoResult, assembliesResult, plansResult, certificationsResult, insurancesResult, alertsResult] = await Promise.all([
-    condoQuery.single(),
+  const isOwner = condo.user_id === user.id
+  
+  // Verificar si está asignado
+  const { data: assignment } = await supabase
+    .from("condo_assignments")
+    .select("id")
+    .eq("condo_id", condoId)
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  const hasAccess = isOwner || assignment !== null || isSuperAdminUser
+
+  if (!hasAccess) {
+    redirect("/dashboard")
+  }
+
+  const [assembliesResult, plansResult, certificationsResult, insurancesResult, alertsResult] = await Promise.all([
     supabase.from("assemblies").select("id", { count: "exact" }).eq("condo_id", condoId),
     supabase.from("emergency_plans").select("id", { count: "exact" }).eq("condo_id", condoId),
     supabase.from("certifications").select("id", { count: "exact" }).eq("condo_id", condoId),
@@ -39,12 +57,6 @@ export default async function CondoDashboardPage({ params }: { params: Promise<{
       .eq("condo_id", condoId)
       .order("created_at", { ascending: false }),
   ])
-
-  if (condoResult.error) {
-    redirect("/dashboard")
-  }
-
-  const condo = condoResult.data
 
   const counts = {
     assemblies: assembliesResult.count || 0,

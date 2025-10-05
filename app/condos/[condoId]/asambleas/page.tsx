@@ -21,12 +21,11 @@ export default async function AsambleasPage({ params }: { params: Promise<{ cond
     redirect("/auth/login")
   }
 
-  // Get assemblies for this condo - Solo del usuario actual
+  // Get assemblies for this condo
   const { data: assemblies, error } = await supabase
     .from("assemblies")
     .select("*")
     .eq("condo_id", condoId)
-    .eq("user_id", user.id)
     .order("date", { ascending: false })
 
   if (error) {
