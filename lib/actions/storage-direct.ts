@@ -143,13 +143,22 @@ export async function deleteFile(filePath: string) {
       throw new Error("No se pudo obtener la información del usuario")
     }
 
+    // Verificar si es super admin
+    const { data: admin } = await supabase
+      .from("administrators")
+      .select("role")
+      .eq("user_id", user.id)
+      .single()
+
+    const isSuperAdmin = admin?.role === 'super_admin'
+
     // Extract the file path from the URL
     const urlParts = filePath.split("/")
     // Nueva estructura: user_id/condo_id/module/filename.pdf
     const fileName = urlParts.slice(-4).join("/") // Get user_id/condoId/module/filename.pdf
 
-    // Verificar que el archivo pertenece al usuario actual
-    if (!fileName.startsWith(user.id)) {
+    // Verificar permisos: propietario del archivo O super admin
+    if (!isSuperAdmin && !fileName.startsWith(user.id)) {
       throw new Error("No tienes permisos para eliminar este archivo")
     }
 
@@ -177,6 +186,15 @@ export async function getSignedUrl(filePath: string) {
       throw new Error("No se pudo obtener la información del usuario")
     }
 
+    // Verificar si es super admin
+    const { data: admin } = await supabase
+      .from("administrators")
+      .select("role")
+      .eq("user_id", user.id)
+      .single()
+
+    const isSuperAdmin = admin?.role === 'super_admin'
+
     // Extract the file path from the URL
     let fileName: string
     
@@ -194,8 +212,8 @@ export async function getSignedUrl(filePath: string) {
       fileName = filePath
     }
 
-    // Verificar que el archivo pertenece al usuario actual
-    if (!fileName.startsWith(user.id)) {
+    // Verificar permisos: propietario del archivo O super admin
+    if (!isSuperAdmin && !fileName.startsWith(user.id)) {
       throw new Error("No tienes permisos para acceder a este archivo")
     }
 
@@ -211,6 +229,9 @@ export async function getSignedUrl(filePath: string) {
     throw new Error("Error al generar enlace de descarga")
   }
 }
+
+
+
 
 
 
