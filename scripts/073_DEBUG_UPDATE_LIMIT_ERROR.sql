@@ -163,3 +163,6 @@ ORDER BY COALESCE(condo_count.count, 0) DESC;
 
 
 
+
+
+

@@ -32,3 +32,6 @@ AND tablename = 'condos';
 
 
 
+
+
+

@@ -169,3 +169,6 @@ COMMENT ON FUNCTION can_manage_gestiones(uuid) IS 'Verifica acceso específico p
 
 
 
+
+
+

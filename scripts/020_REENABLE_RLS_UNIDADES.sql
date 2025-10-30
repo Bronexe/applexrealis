@@ -25,3 +25,6 @@ ALTER TABLE unidades_simplified ENABLE ROW LEVEL SECURITY;
 
 
 
+
+
+

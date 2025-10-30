@@ -74,3 +74,4 @@ WHERE tablename = 'condo_assignments';
 --    - 1 para usuarios regulares (SELECT sus propias asignaciones)
 -- ✅ RLS debe estar habilitado (rowsecurity = true)
 
+

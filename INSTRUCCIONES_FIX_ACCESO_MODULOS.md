@@ -113,3 +113,4 @@ Para probar que todo funciona:
 - ✅ **Seguridad**: Solo usuarios autorizados tienen acceso
 
 El problema está **completamente resuelto**. Los usuarios asignados ahora tienen acceso completo a todos los módulos del condominio asignado.
+
