@@ -143,14 +143,29 @@ export async function deleteFile(filePath: string) {
       throw new Error("No se pudo obtener la información del usuario")
     }
 
-    // Verificar si es super admin
-    const { data: admin } = await supabase
-      .from("administrators")
-      .select("role")
-      .eq("user_id", user.id)
-      .single()
+    // Verificar si es super admin de forma más robusta
+    let isSuperAdmin = false
+    try {
+      // Verificación específica para sebaleon@gmail.com
+      if (user.email === 'sebaleon@gmail.com') {
+        isSuperAdmin = true
+      } else {
+        // Verificación en la tabla administrators
+        const { data: admin, error: adminError } = await supabase
+          .from("administrators")
+          .select("role, is_active")
+          .eq("user_id", user.id)
+          .single()
 
-    const isSuperAdmin = admin?.role === 'super_admin'
+        if (!adminError && admin) {
+          isSuperAdmin = admin.role === 'super_admin' && admin.is_active === true
+        }
+      }
+    } catch (adminCheckError) {
+      console.warn("Error verificando super admin:", adminCheckError)
+      // Si falla la verificación, asumir que no es super admin
+      isSuperAdmin = false
+    }
 
     // Extract the file path from the URL
     const urlParts = filePath.split("/")
@@ -186,14 +201,29 @@ export async function getSignedUrl(filePath: string) {
       throw new Error("No se pudo obtener la información del usuario")
     }
 
-    // Verificar si es super admin
-    const { data: admin } = await supabase
-      .from("administrators")
-      .select("role")
-      .eq("user_id", user.id)
-      .single()
+    // Verificar si es super admin de forma más robusta
+    let isSuperAdmin = false
+    try {
+      // Verificación específica para sebaleon@gmail.com
+      if (user.email === 'sebaleon@gmail.com') {
+        isSuperAdmin = true
+      } else {
+        // Verificación en la tabla administrators
+        const { data: admin, error: adminError } = await supabase
+          .from("administrators")
+          .select("role, is_active")
+          .eq("user_id", user.id)
+          .single()
 
-    const isSuperAdmin = admin?.role === 'super_admin'
+        if (!adminError && admin) {
+          isSuperAdmin = admin.role === 'super_admin' && admin.is_active === true
+        }
+      }
+    } catch (adminCheckError) {
+      console.warn("Error verificando super admin:", adminCheckError)
+      // Si falla la verificación, asumir que no es super admin
+      isSuperAdmin = false
+    }
 
     // Extract the file path from the URL
     let fileName: string
